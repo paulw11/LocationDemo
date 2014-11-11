@@ -23,20 +23,18 @@
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     // Override point for customization after application launch.
     
+    if ([application respondsToSelector:@selector(registerUserNotificationSettings:)]) {
+        [application registerUserNotificationSettings:[UIUserNotificationSettings settingsForTypes:UIUserNotificationTypeAlert categories:nil]];
+    }
+    
+    
     self.locationManager=[[CLLocationManager alloc] init];
     [self.locationManager requestAlwaysAuthorization];
     self.locationManager.delegate=self;
     self.locationManager.desiredAccuracy=kCLLocationAccuracyBest;
     self.locationManager.distanceFilter=10;
-    //   [self.locationManager startUpdatingLocation];
-    if ([CLLocationManager significantLocationChangeMonitoringAvailable]) {
-        NSLog(@"Using significant location monitoring");
-     [self.locationManager startMonitoringSignificantLocationChanges];
-    }
-    else {
-        [self.locationManager startUpdatingLocation];
-    }
-    
+   
+
     self.vc=(ViewController *)self.window.rootViewController;
     
     return YES;
@@ -65,27 +63,7 @@
     
     [self.locationManager stopMonitoringSignificantLocationChanges];
     [self.locationManager startUpdatingLocation];
-    
-    NSMutableArray *values=[NSMutableArray new];
-    UITableView *tableView;
-    
-    [tableView beginUpdates];
-    
-    for (int i=0;i<values.count;i++) {
-        NSNumber *number=[values objectAtIndex:i];
-        NSInteger val=[number integerValue]-1;
-        
-        if (val > 0) {
-            values[i]=[NSNumber numberWithInteger:val];
-            [values setObject:[NSNumber numberWithInteger:val] atIndexedSubscript:i ];
-            NSTimer *e;
-            [e invalidate];
-        }
-        else {
-            [values removeObjectAtIndex:i];
-            [tableView deleteRowsAtIndexPaths:@[[NSIndexPath indexPathForRow:i inSection:0]] withRowAnimation:UITableViewRowAnimationFade];
-        }
-    }
+
     
 }
 
@@ -108,11 +86,14 @@
     UIApplication *app=[UIApplication sharedApplication];
     if (app.applicationState == UIApplicationStateBackground) {
         NSLog(@"We are in the background");
-        if (self.notificationDate == nil || [   self.notificationDate timeIntervalSinceNow] < -299) {
-            UILocalNotification *notification=[UILocalNotification new];
-            notification.alertBody=[NSString stringWithFormat:@"Location updated to %f %f",loc.coordinate.latitude,loc.coordinate.longitude ];
-            [app presentLocalNotificationNow:notification];
-            self.notificationDate=[NSDate new];
+        UIUserNotificationSettings *notifySettings=[[UIApplication sharedApplication] currentUserNotificationSettings];
+        if ((notifySettings.types & UIUserNotificationTypeAlert)!=0) {
+            if (self.notificationDate == nil || [   self.notificationDate timeIntervalSinceNow] < -299) {
+                UILocalNotification *notification=[UILocalNotification new];
+                notification.alertBody=[NSString stringWithFormat:@"Location updated to %f %f",loc.coordinate.latitude,loc.coordinate.longitude ];
+                [app presentLocalNotificationNow:notification];
+                self.notificationDate=[NSDate new];
+            }
         }
     }
 }
@@ -120,7 +101,11 @@
 - (void)locationManager:(CLLocationManager *)manager didChangeAuthorizationStatus:(CLAuthorizationStatus)status
 {
     NSLog(@"Authorization status is now %d",status);
-    NSLog(@"When in use=%d",kCLAuthorizationStatusAuthorizedWhenInUse);
+    
+    if (status == kCLAuthorizationStatusAuthorized || status == kCLAuthorizationStatusAuthorizedAlways)
+    {
+         [self.locationManager startUpdatingLocation];
+    }
 }
 
 -(void)locationManager:(CLLocationManager *)manager didFinishDeferredUpdatesWithError:(NSError *)error {

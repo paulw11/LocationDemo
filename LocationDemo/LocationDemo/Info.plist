@@ -46,6 +46,6 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>Demo</string>
+	<string>Demonstrate location in the background</string>
 </dict>
 </plist>
